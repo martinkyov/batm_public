@@ -25,29 +25,19 @@ import com.generalbytes.batm.server.extensions.extra.bitcoin.exchanges.binance.B
 import com.generalbytes.batm.server.extensions.extra.bitcoin.sources.coingecko.CoinGeckoRateSource;
 import com.generalbytes.batm.server.extensions.extra.bitcoin.sources.coinpaprika.CoinPaprikaRateSource;
 import com.generalbytes.batm.server.extensions.extra.dash.sources.coinmarketcap.CoinmarketcapRateSource;
-import com.generalbytes.batm.server.extensions.extra.nano.util.NanoUtil;
-import com.generalbytes.batm.server.extensions.extra.nano.wallet.demo.DemoWallet;
-import com.generalbytes.batm.server.extensions.extra.nano.wallet.node.NanoNodeWallet;
+import com.generalbytes.batm.server.extensions.extra.potcoin.PotcoinAddressValidator;
+import com.generalbytes.batm.server.extensions.extra.potcoin.wallets.potwallet.Potwallet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collections;
-import java.util.Set;
-import java.util.StringTokenizer;
+import java.math.BigDecimal;
+import java.util.*;
 
-/*
- * EXTENSION NOTES:
- *
- * The NanoExtensionContext object which is passed around contains various different objects relating to the
- * cryptocurrency being used, including the crypto code identifier, address format and standard unit denomination.
- */
 public class NanoExtension extends AbstractExtension {
 
+    public static final String CODE = CryptoCurrency.NANO.getCode();
+
     private static final Logger log = LoggerFactory.getLogger(NanoExtension.class);
-
-    public static final CryptoCurrency CRYPTO = CryptoCurrency.NANO;
-
-    private volatile NanoExtensionContext context = new NanoExtensionContext(CRYPTO, ctx, NanoUtil.NANO);
 
 
     @Override
@@ -56,47 +46,65 @@ public class NanoExtension extends AbstractExtension {
     }
 
     @Override
-    public void init(IExtensionContext ctx) {
-        super.init(ctx);
-        this.context = new NanoExtensionContext(CRYPTO, ctx, NanoUtil.NANO);
+    public IWallet createWallet(String walletLogin, String tunnelPassword) {
+        return null; //todo
     }
 
     @Override
-    public IWallet createWallet(String walletLogin, String tunnelPassword) {
-        try {
-            if (walletLogin != null && !walletLogin.trim().isEmpty()) {
-                StringTokenizer st = new StringTokenizer(walletLogin, ":");
-                String walletName = st.nextToken();
+    public ICryptoAddressValidator createAddressValidator(String cryptoCurrency) {
+        if (CODE.equalsIgnoreCase(cryptoCurrency))
+            return new NanoAddressValidator();
+        return null;
+    }
 
-                if ("nano_node".equalsIgnoreCase(walletName)) {
-                    return NanoNodeWallet.create(context, st);
-                } else if ("nano_demo".equalsIgnoreCase(walletName)) {
-                    String fiatCurrency = st.nextToken();
-                    String walletAddress = st.nextToken();
-                    return new DemoWallet(fiatCurrency, CRYPTO.getCode(), walletAddress);
-                }
+    @Override
+    public IRateSource createRateSource(String sourceLogin) {
+        if (sourceLogin != null && !sourceLogin.trim().isEmpty()) {
+            StringTokenizer st = new StringTokenizer(sourceLogin, ":");
+            String rsType = st.nextToken();
+
+            if ("coinmarketcap".equalsIgnoreCase(rsType)) {
+                String preferredFiatCurrency = st.hasMoreTokens()
+                        ? st.nextToken().toUpperCase() : FiatCurrency.USD.getCode();
+                String apiKey = st.hasMoreTokens() ? st.nextToken() : null;
+                return new CoinmarketcapRateSource(apiKey, preferredFiatCurrency);
+            } else if ("coingecko".equalsIgnoreCase(rsType)) {
+                String preferredFiatCurrency = st.hasMoreTokens()
+                        ? st.nextToken().toUpperCase() : FiatCurrency.USD.getCode();
+                return new CoinGeckoRateSource(preferredFiatCurrency);
+            } else if ("coinpaprika".equalsIgnoreCase(rsType)) {
+                String preferredFiatCurrency = st.hasMoreTokens()
+                        ? st.nextToken().toUpperCase() : FiatCurrency.USD.getCode();
+                return new CoinPaprikaRateSource(preferredFiatCurrency);
+            } else if ("binancecom".equalsIgnoreCase(rsType)) {
+                String preferredFiatCurrency = st.hasMoreTokens()
+                        ? st.nextToken().toUpperCase() : FiatCurrency.EUR.getCode();
+                return new BinanceComExchange(preferredFiatCurrency);
+            } else if ("binanceus".equalsIgnoreCase(rsType)) {
+                String preferredFiatCurrency = st.hasMoreTokens()
+                        ? st.nextToken().toUpperCase() : FiatCurrency.USD.getCode();
+                return new BinanceUsExchange(preferredFiatCurrency);
             }
-        } catch (Exception e) {
-            log.error("Couldn't create wallet.", e);
+
         }
         return null;
     }
 
     @Override
-    public ICryptoAddressValidator createAddressValidator(String cryptoCurrency) {
-        if (CRYPTO.getCode().equalsIgnoreCase(cryptoCurrency))
-            return new NanoAddressValidator(context);
-        return null;
-    }
-
-    @Override
     public Set<String> getSupportedCryptoCurrencies() {
-        return Collections.singleton(CRYPTO.getCode());
+        return Collections.singleton(CODE);
     }
 
     @Override
     public Set<ICryptoCurrencyDefinition> getCryptoCurrencyDefinitions() {
-        return Collections.singleton(new NanoDefinition(new NanoPaymentSupport(context)));
+        return Collections.singleton(new NanoDefinition());
+    }
+
+    @Override
+    public IPaperWalletGenerator createPaperWalletGenerator(String cryptoCurrency) {
+//        if (CODE.equalsIgnoreCase(cryptoCurrency)) todo
+//            return new NanoPaperWalletGenerator(ctx, CURRENCY_SPEC);
+        return null;
     }
 
 }
