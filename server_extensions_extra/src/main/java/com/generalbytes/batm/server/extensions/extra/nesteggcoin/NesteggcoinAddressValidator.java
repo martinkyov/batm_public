@@ -15,7 +15,7 @@
  * Web      :  http://www.generalbytes.com
  *
  ************************************************************************************/
-package com.generalbytes.batm.server.extensions.extra.nesteggcoin;
+package com.generalbytes.batm.server.extensions.extra.newyorkcoin;
 
 import com.generalbytes.batm.server.coinutil.AddressFormatException;
 import com.generalbytes.batm.server.coinutil.Base58;
@@ -25,11 +25,11 @@ import com.generalbytes.batm.server.extensions.ICryptoAddressValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class NesteggcoinAddressValidator implements ICryptoAddressValidator {
-    private static final Logger log = LoggerFactory.getLogger("batm.master.extensions.NesteggcoinAddressValidator");
+public class NesteggAddressValidator implements ICryptoAddressValidator {
+    private static final Logger log = LoggerFactory.getLogger("batm.master.extensions.NesteggAddressValidator");
     @Override
     public boolean isAddressValid(String address) {
-        if (address.startsWith("E")) {
+        if (address.startsWith("R")) {
             try {
                 Base58.decodeToBigInteger(address);
                 Base58.decodeChecked(address);
